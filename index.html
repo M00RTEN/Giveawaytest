@@ -35,7 +35,7 @@
 
     <div id="login-screen" style="margin-top:100px;">
         <h1>GameNinja RIGGED Giveaways</h1>
-        <button class="btn" style="width:auto; padding: 20px 40px;" onclick="login()">LOGG INN MED TWITCH</button>
+        <button class="btn" style="width:auto; padding: 20px 40px;" onclick="login()">LOGG INN PÅ NYTT (VIKTIG)</button>
     </div>
 
     <div id="app" style="display:none;" class="card">
@@ -59,24 +59,11 @@
         </div>
     </div>
 
-    <div id="owner-modal" class="overlay">
-        <div class="modal">
-            <h2 style="color: var(--a);">HEHE! 😎</h2>
-            <p>Dobbel giveaway om du vinner, siden du joiner giveawayen selv? hehe</p>
-            <div style="display: flex; gap: 10px; margin-top: 25px;">
-                <button style="background: #2ecc71; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold;" onclick="ownerAnswer(true)">JA!</button>
-                <button style="background: #e74c3c; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold;" onclick="ownerAnswer(false)">NEI</button>
-            </div>
-        </div>
-    </div>
-
     <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
         <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
         <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
         <p style="color: #444;">Trykk for å lukke</p>
     </div>
-
-    <a href="https://twitch.tv/m00rten" target="_blank" class="footer">made by <b>M00RTEN</b></a>
 
     <script>
         const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
@@ -109,18 +96,20 @@
             });
         }
 
+        // URL-encoding av scopes er viktig her (bruker %20 i stedet for +)
         function login() { 
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read+chat:edit`; 
+            const scopes = encodeURIComponent("chat:read chat:edit");
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=${scopes}`; 
         }
 
         function connectToChat(chan, tok) {
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
             socket.onopen = () => {
-                socket.send('CAP REQ :twitch.tv/tags');
+                socket.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("TILKOBLET OG KLAR!");
+                dbg("TILKOBLET!");
             };
             socket.onmessage = (event) => {
                 const data = event.data;
@@ -134,7 +123,6 @@
                     const user = userMatch ? userMatch[1].toLowerCase() : "ukjent";
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
                     if (msg === trigger && !uniqueParticipants.has(user)) {
-                        if (user === chan.toLowerCase()) document.getElementById('owner-modal').style.display = 'flex';
                         uniqueParticipants.add(user);
                         participantsPool.push(user);
                         if (isSub && document.getElementById('sub-power').checked) {
@@ -156,11 +144,6 @@
             document.getElementById('list-modal').style.display = 'flex';
         }
 
-        function ownerAnswer(isYes) {
-            document.getElementById('owner-modal').style.display = 'none';
-            if (isYes) dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
-        }
-
         function draw() {
             if (participantsPool.length === 0) return alert("Ingen deltakere!");
             const winner = participantsPool[Math.floor(Math.random() * participantsPool.length)];
@@ -169,9 +152,11 @@
             confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
 
             if (socket && socket.readyState === WebSocket.OPEN) {
-                // Sender offentlig melding i chatten med tagging og instruks
-                socket.send(`PRIVMSG #${channelName} :/me 🏆 Gratulerer @${winner}! Send oss en melding i chat eller whisper med info om henting/frakt.`);
-                dbg(`Beskjed sendt til chat: Gratulerer @${winner}!`);
+                const chatMsg = `Gratulerer @${winner}! Send oss en melding i chat eller whisper med info om henting/frakt.`;
+                socket.send(`PRIVMSG #${channelName} :${chatMsg}`);
+                dbg(`Forsøkte å sende melding til chat...`);
+            } else {
+                dbg("Feil: Ikke tilkoblet chat-serveren.", true);
             }
         }
     </script>
