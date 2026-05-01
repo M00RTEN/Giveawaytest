@@ -20,22 +20,17 @@
         input:checked + .slider:before { transform: translateX(20px); }
         .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
         .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
-        .list-trigger { color: var(--p); cursor: pointer; font-size: 0.8rem; letter-spacing: 2px; font-weight: bold; text-decoration: underline; margin-bottom: 15px; display: block; }
-        #debug { background: #000; color: #0f0; padding: 10px; height: 80px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
+        #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; }
-        .footer { position: fixed; bottom: 15px; right: 20px; font-size: 0.75rem; color: #444; text-decoration: none; transition: 0.3s; z-index: 0; }
-        .footer b { color: #666; transition: 0.3s; }
-        .footer:hover { color: #888; }
-        .footer:hover b { color: var(--p); }
-        #full-user-list { max-height: 300px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; font-family: monospace; line-height: 1.6; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
     <div id="login-screen" style="margin-top:100px;">
         <h1>GameNinja RIGGED Giveaways</h1>
-        <button class="btn" style="width:auto; padding: 20px 40px;" onclick="login()">LOGG INN PÅ NYTT (VIKTIG)</button>
+        <p>Du må logge inn på nytt for å aktivere chat-meldinger.</p>
+        <button class="btn" style="width:auto; padding: 20px 40px;" onclick="login()">LOGG INN MED TWITCH</button>
     </div>
 
     <div id="app" style="display:none;" class="card">
@@ -45,24 +40,15 @@
             <span>2x sjanse for Subs?</span>
             <label class="switch"><input type="checkbox" id="sub-power"><span class="slider"></span></label>
         </div>
-        <div class="stats" id="count" onclick="showFullList()">0</div>
-        <span class="list-trigger" onclick="showFullList()">SE FULL DELTAKERLISTE</span>
+        <div class="stats" id="count">0</div>
         <button class="btn" onclick="draw()">TREKK EN VINNER!</button>
         <div id="debug"></div>
-    </div>
-
-    <div id="list-modal" class="overlay" onclick="this.style.display='none'">
-        <div class="modal" onclick="event.stopPropagation()">
-            <h2 style="color: var(--a);">DELTAKERE</h2>
-            <div id="full-user-list">Ingen påmeldte...</div>
-            <button class="btn" style="margin-top:20px; padding:10px;" onclick="document.getElementById('list-modal').style.display='none'">LUKK</button>
-        </div>
     </div>
 
     <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
         <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
         <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
-        <p style="color: #444;">Trykk for å lukke</p>
+        <p>Trykk for å lukke</p>
     </div>
 
     <script>
@@ -75,10 +61,14 @@
 
         const dbg = (msg, isSpecial = false) => {
             const d = document.getElementById('debug');
-            const color = isSpecial ? "#00f2ff" : "#0f0";
-            d.innerHTML += `> <span style="color:${color}">${msg}</span><br>`;
+            d.innerHTML += `> <span style="color:${isSpecial ? "#00f2ff" : "#0f0"}">${msg}</span><br>`;
             d.scrollTop = d.scrollHeight;
         };
+
+        function login() { 
+            const scopes = encodeURIComponent("chat:read chat:edit");
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=${scopes}`; 
+        }
 
         const token = new URLSearchParams(window.location.hash.replace("#", "?")).get("access_token");
 
@@ -96,67 +86,63 @@
             });
         }
 
-        // URL-encoding av scopes er viktig her (bruker %20 i stedet for +)
-        function login() { 
-            const scopes = encodeURIComponent("chat:read chat:edit");
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=${scopes}`; 
-        }
-
         function connectToChat(chan, tok) {
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
             socket.onopen = () => {
-                socket.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("TILKOBLET!");
+                dbg("Tilkoblet chat!");
             };
+
             socket.onmessage = (event) => {
-                const data = event.data;
-                if (data.includes('PING :tmi.twitch.tv')) { socket.send('PONG :tmi.twitch.tv'); return; }
-                if (data.includes('PRIVMSG')) {
-                    const isSub = data.includes('subscriber=1');
-                    const parts = data.split('PRIVMSG #' + chan + ' :');
-                    if (parts.length < 2) return;
-                    const msg = parts[1].trim().toLowerCase();
-                    const userMatch = data.match(/display-name=([^;]+)/);
-                    const user = userMatch ? userMatch[1].toLowerCase() : "ukjent";
+                const raw = event.data;
+                
+                // Svar på PING for å holde liv i tilkoblingen
+                if (raw.startsWith('PING')) {
+                    socket.send('PONG :tmi.twitch.tv');
+                    return;
+                }
+
+                if (raw.includes('PRIVMSG')) {
+                    const user = raw.split('!')[0].substring(1);
+                    const msg = raw.split('PRIVMSG')[1].split(':')[1].trim().toLowerCase();
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
+
                     if (msg === trigger && !uniqueParticipants.has(user)) {
                         uniqueParticipants.add(user);
                         participantsPool.push(user);
+                        
+                        const isSub = raw.includes('subscriber=1');
                         if (isSub && document.getElementById('sub-power').checked) {
                             participantsPool.push(user);
-                            dbg(`💎 ${user} (2x sjanse!)`, true);
-                        } else {
-                            dbg(`${user} ble med!`);
                         }
+                        
                         document.getElementById('count').innerText = uniqueParticipants.size;
+                        dbg(`${user} ble med!`);
                     }
                 }
             };
-        }
 
-        function showFullList() {
-            const listEl = document.getElementById('full-user-list');
-            const sorted = Array.from(uniqueParticipants).sort();
-            listEl.innerHTML = sorted.length ? sorted.map((u, i) => `${i+1}. ${u}`).join("<br>") : "Ingen påmeldte...";
-            document.getElementById('list-modal').style.display = 'flex';
+            socket.onclose = () => dbg("Mistet tilkobling. Last inn siden på nytt.", true);
         }
 
         function draw() {
             if (participantsPool.length === 0) return alert("Ingen deltakere!");
+            
             const winner = participantsPool[Math.floor(Math.random() * participantsPool.length)];
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
 
+            // SEND MELDING
             if (socket && socket.readyState === WebSocket.OPEN) {
-                const chatMsg = `Gratulerer @${winner}! Send oss en melding i chat eller whisper med info om henting/frakt.`;
-                socket.send(`PRIVMSG #${channelName} :${chatMsg}`);
-                dbg(`Forsøkte å sende melding til chat...`);
+                const finalMsg = `Gratulerer @${winner}! Send oss en melding i chat eller whisper med info om henting/frakt.`;
+                socket.send(`PRIVMSG #${channelName} :${finalMsg}`);
+                dbg(`Meldingsforsøk sendt for: ${winner}`);
             } else {
-                dbg("Feil: Ikke tilkoblet chat-serveren.", true);
+                dbg("Kunne ikke sende melding: Ingen kontakt med Twitch.", true);
             }
         }
     </script>
