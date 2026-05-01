@@ -7,14 +7,10 @@
     <style>
         :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; min-height: 100vh; position: relative; }
-        
         .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); position: relative; z-index: 1; }
-        
         h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
         .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); cursor: pointer; }
-        
         input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
-        
         .sub-toggle { background: #26262c; padding: 10px; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #333; font-size: 0.9rem; }
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -22,21 +18,16 @@
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--p); }
         input:checked + .slider:before { transform: translateX(20px); }
-
         .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
         .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
         .list-trigger { color: var(--p); cursor: pointer; font-size: 0.8rem; letter-spacing: 2px; font-weight: bold; text-decoration: underline; margin-bottom: 15px; display: block; }
-        
         #debug { background: #000; color: #0f0; padding: 10px; height: 80px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
-        
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; }
-        
         .footer { position: fixed; bottom: 15px; right: 20px; font-size: 0.75rem; color: #444; text-decoration: none; transition: 0.3s; z-index: 0; }
         .footer b { color: #666; transition: 0.3s; }
         .footer:hover { color: #888; }
         .footer:hover b { color: var(--p); }
-
         #full-user-list { max-height: 300px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; font-family: monospace; line-height: 1.6; border: 1px solid #333; }
     </style>
 </head>
@@ -50,15 +41,10 @@
     <div id="app" style="display:none;" class="card">
         <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
         <input type="text" id="cmd" value="!join">
-        
         <div class="sub-toggle">
             <span>2x sjanse for Subs?</span>
-            <label class="switch">
-                <input type="checkbox" id="sub-power">
-                <span class="slider"></span>
-            </label>
+            <label class="switch"><input type="checkbox" id="sub-power"><span class="slider"></span></label>
         </div>
-
         <div class="stats" id="count" onclick="showFullList()">0</div>
         <span class="list-trigger" onclick="showFullList()">SE FULL DELTAKERLISTE</span>
         <button class="btn" onclick="draw()">TREKK EN VINNER!</button>
@@ -90,14 +76,11 @@
         <p style="color: #444;">Trykk for å lukke</p>
     </div>
 
-    <a href="https://twitch.tv/m00rten" target="_blank" class="footer">
-        made by <b>M00RTEN</b>
-    </a>
+    <a href="https://twitch.tv/m00rten" target="_blank" class="footer">made by <b>M00RTEN</b></a>
 
     <script>
         const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
         const URI = window.location.origin + window.location.pathname; 
-        
         let participantsPool = []; 
         let uniqueParticipants = new Set(); 
         let channelName = "";
@@ -126,7 +109,6 @@
             });
         }
 
-        // Oppdatert scope til å inkludere chat:edit
         function login() { 
             window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read+chat:edit`; 
         }
@@ -138,37 +120,30 @@
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("KLAR!");
+                dbg("KLAR OG TILKOBLET!");
             };
             socket.onmessage = (event) => {
                 const data = event.data;
                 if (data.includes('PING :tmi.twitch.tv')) { socket.send('PONG :tmi.twitch.tv'); return; }
-
                 if (data.includes('PRIVMSG')) {
                     const isSub = data.includes('subscriber=1');
                     const parts = data.split('PRIVMSG #' + chan + ' :');
                     if (parts.length < 2) return;
-                    
                     const msg = parts[1].trim().toLowerCase();
                     const userMatch = data.match(/display-name=([^;]+)/);
                     const user = userMatch ? userMatch[1].toLowerCase() : "ukjent";
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
-
-                    if (msg === trigger) {
-                        if (!uniqueParticipants.has(user)) {
-                            if (user === chan.toLowerCase()) document.getElementById('owner-modal').style.display = 'flex';
-
-                            uniqueParticipants.add(user);
+                    if (msg === trigger && !uniqueParticipants.has(user)) {
+                        if (user === chan.toLowerCase()) document.getElementById('owner-modal').style.display = 'flex';
+                        uniqueParticipants.add(user);
+                        participantsPool.push(user);
+                        if (isSub && document.getElementById('sub-power').checked) {
                             participantsPool.push(user);
-                            
-                            if (isSub && document.getElementById('sub-power').checked) {
-                                participantsPool.push(user);
-                                dbg(`💎 ${user} (2x SUB sjanse!)`, true);
-                            } else {
-                                dbg(`${user} ble med!`);
-                            }
-                            document.getElementById('count').innerText = uniqueParticipants.size;
+                            dbg(`💎 ${user} (2x sjanse!)`, true);
+                        } else {
+                            dbg(`${user} ble med!`);
                         }
+                        document.getElementById('count').innerText = uniqueParticipants.size;
                     }
                 }
             };
@@ -189,16 +164,14 @@
         function draw() {
             if (participantsPool.length === 0) return alert("Ingen deltakere!");
             const winner = participantsPool[Math.floor(Math.random() * participantsPool.length)];
-            
-            // Vis i GUI
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
 
-            // Send melding til Twitch-chat
             if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(`PRIVMSG #${channelName} :Gratulerer @${winner}, du vant giveawayen! 🎉`);
-                dbg(`Melding sendt til chat: Vinner er ${winner}`);
+                // Siden WHISPER er sperret, bruker vi en tydelig annonsering i chat
+                socket.send(`PRIVMSG #${channelName} :/me 🏆 GRATULERER @${winner}! Du vant nettopp giveawayen! 🎉`);
+                dbg(`Vinner annonsert: ${winner}`);
             }
         }
     </script>
