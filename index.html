@@ -2,72 +2,62 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <title>GameNinja RIGGED Giveaways</title>
+    <title>GameNinja Giveaway System</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; min-height: 100vh; position: relative; }
-        .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); position: relative; z-index: 1; }
-        h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
-        .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); cursor: pointer; }
-        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
-        .sub-toggle { background: #26262c; padding: 10px; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #333; font-size: 0.9rem; }
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #444; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--p); }
-        input:checked + .slider:before { transform: translateX(20px); }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; min-height: 100vh; }
+        .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
+        h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2rem; font-weight: 900; }
+        .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; }
+        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; }
         .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
-        .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
-        #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; }
+        .btn:hover { transform: scale(1.02); filter: brightness(1.2); }
+        #debug { background: #000; color: #0f0; padding: 10px; height: 120px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
     </style>
 </head>
 <body>
 
     <div id="login-screen" style="margin-top:100px;">
-        <h1>GameNinja RIGGED Giveaways</h1>
-        <p>Du må logge inn på nytt for å aktivere chat-meldinger.</p>
+        <h1>GameNinja Giveaways</h1>
+        <p>For at chat-meldinger skal fungere, må du logge inn på nytt.</p>
         <button class="btn" style="width:auto; padding: 20px 40px;" onclick="login()">LOGG INN MED TWITCH</button>
     </div>
 
     <div id="app" style="display:none;" class="card">
-        <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
+        <h2 id="chan-display" style="color:var(--p); margin:0;">KANAL</h2>
         <input type="text" id="cmd" value="!join">
-        <div class="sub-toggle">
-            <span>2x sjanse for Subs?</span>
-            <label class="switch"><input type="checkbox" id="sub-power"><span class="slider"></span></label>
-        </div>
         <div class="stats" id="count">0</div>
-        <button class="btn" onclick="draw()">TREKK EN VINNER!</button>
+        <button class="btn" onclick="draw()">TREKK VINNER & SEND MELDING</button>
         <div id="debug"></div>
     </div>
 
     <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
         <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
-        <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
-        <p>Trykk for å lukke</p>
+        <h1 style="font-size: 5rem; color: var(--a);" id="winner-name">?</h1>
+        <p>Klikk for å lukke</p>
     </div>
 
     <script>
         const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
         const URI = window.location.origin + window.location.pathname; 
-        let participantsPool = []; 
-        let uniqueParticipants = new Set(); 
-        let channelName = "";
+        
+        let participants = new Set();
+        let pool = [];
+        let channel = "";
         let socket;
 
-        const dbg = (msg, isSpecial = false) => {
+        const log = (msg) => {
             const d = document.getElementById('debug');
-            d.innerHTML += `> <span style="color:${isSpecial ? "#00f2ff" : "#0f0"}">${msg}</span><br>`;
+            d.innerHTML += `> ${msg}<br>`;
             d.scrollTop = d.scrollHeight;
         };
 
-        function login() { 
-            const scopes = encodeURIComponent("chat:read chat:edit");
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=${scopes}`; 
+        function login() {
+            // Vi legger til chat:read og chat:edit eksplisitt
+            const scopes = "chat:read chat:edit";
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=${encodeURIComponent(scopes)}`;
         }
 
         const token = new URLSearchParams(window.location.hash.replace("#", "?")).get("access_token");
@@ -75,74 +65,67 @@
         if (token) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app').style.display = 'block';
+            
             fetch('https://api.twitch.tv/helix/users', {
                 headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CID }
             })
             .then(r => r.json())
             .then(data => {
-                channelName = data.data[0].login;
-                document.getElementById('chan-display').innerText = channelName.toUpperCase();
-                connectToChat(channelName, token);
+                channel = data.data[0].login;
+                document.getElementById('chan-display').innerText = channel.toUpperCase();
+                connect(channel, token);
             });
         }
 
-        function connectToChat(chan, tok) {
+        function connect(chan, tok) {
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
             socket.onopen = () => {
+                // Be om ekstra data fra Twitch (for å se subs og badges)
+                socket.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("Tilkoblet chat!");
+                log("Tilkoblet Twitch Chat!");
             };
 
-            socket.onmessage = (event) => {
-                const raw = event.data;
-                
-                // Svar på PING for å holde liv i tilkoblingen
-                if (raw.startsWith('PING')) {
+            socket.onmessage = (e) => {
+                if (e.data.includes('PING :tmi.twitch.tv')) {
                     socket.send('PONG :tmi.twitch.tv');
                     return;
                 }
 
-                if (raw.includes('PRIVMSG')) {
-                    const user = raw.split('!')[0].substring(1);
-                    const msg = raw.split('PRIVMSG')[1].split(':')[1].trim().toLowerCase();
+                if (e.data.includes('PRIVMSG')) {
+                    const match = e.data.match(/:(\w+)!/);
+                    const user = match ? match[1] : null;
+                    const msg = e.data.split('PRIVMSG')[1].split(':')[1].trim().toLowerCase();
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
 
-                    if (msg === trigger && !uniqueParticipants.has(user)) {
-                        uniqueParticipants.add(user);
-                        participantsPool.push(user);
-                        
-                        const isSub = raw.includes('subscriber=1');
-                        if (isSub && document.getElementById('sub-power').checked) {
-                            participantsPool.push(user);
-                        }
-                        
-                        document.getElementById('count').innerText = uniqueParticipants.size;
-                        dbg(`${user} ble med!`);
+                    if (user && msg === trigger && !participants.has(user)) {
+                        participants.add(user);
+                        pool.push(user);
+                        document.getElementById('count').innerText = participants.size;
+                        log(`${user} ble med.`);
                     }
                 }
             };
-
-            socket.onclose = () => dbg("Mistet tilkobling. Last inn siden på nytt.", true);
         }
 
         function draw() {
-            if (participantsPool.length === 0) return alert("Ingen deltakere!");
+            if (pool.length === 0) return alert("Ingen deltakere!");
             
-            const winner = participantsPool[Math.floor(Math.random() * participantsPool.length)];
+            const winner = pool[Math.floor(Math.random() * pool.length)];
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
-            confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
+            confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
 
-            // SEND MELDING
+            // SEND MELDING TIL CHAT
             if (socket && socket.readyState === WebSocket.OPEN) {
-                const finalMsg = `Gratulerer @${winner}! Send oss en melding i chat eller whisper med info om henting/frakt.`;
-                socket.send(`PRIVMSG #${channelName} :${finalMsg}`);
-                dbg(`Meldingsforsøk sendt for: ${winner}`);
+                const text = `Gratulerer @${winner}! Send oss en melding i chat eller whisper med info om henting/frakt.`;
+                socket.send(`PRIVMSG #${channel} :${text}`);
+                log(`Meldingsforsøk sendt for ${winner}`);
             } else {
-                dbg("Kunne ikke sende melding: Ingen kontakt med Twitch.", true);
+                log("FEIL: Chat-tilkobling er brutt.");
             }
         }
     </script>
