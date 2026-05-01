@@ -120,7 +120,7 @@
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("KLAR OG TILKOBLET!");
+                dbg("TILKOBLET OG KLAR!");
             };
             socket.onmessage = (event) => {
                 const data = event.data;
@@ -169,9 +169,9 @@
             confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
 
             if (socket && socket.readyState === WebSocket.OPEN) {
-                // Siden WHISPER er sperret, bruker vi en tydelig annonsering i chat
-                socket.send(`PRIVMSG #${channelName} :/me 🏆 GRATULERER @${winner}! Du vant nettopp giveawayen! 🎉`);
-                dbg(`Vinner annonsert: ${winner}`);
+                // Sender offentlig melding i chatten med tagging og instruks
+                socket.send(`PRIVMSG #${channelName} :/me 🏆 Gratulerer @${winner}! Send oss en melding i chat eller whisper med info om henting/frakt.`);
+                dbg(`Beskjed sendt til chat: Gratulerer @${winner}!`);
             }
         }
     </script>
