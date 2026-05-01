@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>GameNinja RIGGED Giveaways</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; min-height: 100vh; position: relative; }
+        
+        .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); position: relative; z-index: 1; }
+        
+        h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
+        .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); cursor: pointer; }
+        
+        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
+        
+        .sub-toggle { background: #26262c; padding: 10px; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #333; font-size: 0.9rem; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #444; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--p); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
+        .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
+        .list-trigger { color: var(--p); cursor: pointer; font-size: 0.8rem; letter-spacing: 2px; font-weight: bold; text-decoration: underline; margin-bottom: 15px; display: block; }
+        
+        #debug { background: #000; color: #0f0; padding: 10px; height: 80px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
+        
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; }
+        
+        .footer { position: fixed; bottom: 15px; right: 20px; font-size: 0.75rem; color: #444; text-decoration: none; transition: 0.3s; z-index: 0; }
+        .footer b { color: #666; transition: 0.3s; }
+        .footer:hover { color: #888; }
+        .footer:hover b { color: var(--p); }
+
+        #full-user-list { max-height: 300px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; font-family: monospace; line-height: 1.6; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen" style="margin-top:100px;">
+        <h1>GameNinja RIGGED Giveaways</h1>
+        <button class="btn" style="width:auto; padding: 20px 40px;" onclick="login()">LOGG INN MED TWITCH</button>
+    </div>
+
+    <div id="app" style="display:none;" class="card">
+        <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
+        <input type="text" id="cmd" value="!join">
+        
+        <div class="sub-toggle">
+            <span>2x sjanse for Subs?</span>
+            <label class="switch">
+                <input type="checkbox" id="sub-power">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="stats" id="count" onclick="showFullList()">0</div>
+        <span class="list-trigger" onclick="showFullList()">SE FULL DELTAKERLISTE</span>
+        <button class="btn" onclick="draw()">TREKK EN VINNER!</button>
+        <div id="debug"></div>
+    </div>
+
+    <div id="list-modal" class="overlay" onclick="this.style.display='none'">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 style="color: var(--a);">DELTAKERE</h2>
+            <div id="full-user-list">Ingen påmeldte...</div>
+            <button class="btn" style="margin-top:20px; padding:10px;" onclick="document.getElementById('list-modal').style.display='none'">LUKK</button>
+        </div>
+    </div>
+
+    <div id="owner-modal" class="overlay">
+        <div class="modal">
+            <h2 style="color: var(--a);">HEHE! 😎</h2>
+            <p>Dobbel giveaway om du vinner, siden du joiner giveawayen selv? hehe</p>
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <button style="background: #2ecc71; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold;" onclick="ownerAnswer(true)">JA!</button>
+                <button style="background: #e74c3c; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold;" onclick="ownerAnswer(false)">NEI</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
+        <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
+        <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
+        <p style="color: #444;">Trykk for å lukke</p>
+    </div>
+
+    <a href="https://twitch.tv/m00rten" target="_blank" class="footer">
+        made by <b>M00RTEN</b>
+    </a>
+
+    <script>
+        const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
+        const URI = window.location.origin + window.location.pathname; 
+        
+        let participantsPool = []; 
+        let uniqueParticipants = new Set(); 
+        let channelName = "";
+        let socket;
+
+        const dbg = (msg, isSpecial = false) => {
+            const d = document.getElementById('debug');
+            const color = isSpecial ? "#00f2ff" : "#0f0";
+            d.innerHTML += `> <span style="color:${color}">${msg}</span><br>`;
+            d.scrollTop = d.scrollHeight;
+        };
+
+        const token = new URLSearchParams(window.location.hash.replace("#", "?")).get("access_token");
+
+        if (token) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            fetch('https://api.twitch.tv/helix/users', {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CID }
+            })
+            .then(r => r.json())
+            .then(data => {
+                channelName = data.data[0].login;
+                document.getElementById('chan-display').innerText = channelName.toUpperCase();
+                connectToChat(channelName, token);
+            });
+        }
+
+        // Oppdatert scope til å inkludere chat:edit
+        function login() { 
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read+chat:edit`; 
+        }
+
+        function connectToChat(chan, tok) {
+            socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+            socket.onopen = () => {
+                socket.send('CAP REQ :twitch.tv/tags');
+                socket.send(`PASS oauth:${tok}`);
+                socket.send(`NICK ${chan}`);
+                socket.send(`JOIN #${chan}`);
+                dbg("KLAR!");
+            };
+            socket.onmessage = (event) => {
+                const data = event.data;
+                if (data.includes('PING :tmi.twitch.tv')) { socket.send('PONG :tmi.twitch.tv'); return; }
+
+                if (data.includes('PRIVMSG')) {
+                    const isSub = data.includes('subscriber=1');
+                    const parts = data.split('PRIVMSG #' + chan + ' :');
+                    if (parts.length < 2) return;
+                    
+                    const msg = parts[1].trim().toLowerCase();
+                    const userMatch = data.match(/display-name=([^;]+)/);
+                    const user = userMatch ? userMatch[1].toLowerCase() : "ukjent";
+                    const trigger = document.getElementById('cmd').value.trim().toLowerCase();
+
+                    if (msg === trigger) {
+                        if (!uniqueParticipants.has(user)) {
+                            if (user === chan.toLowerCase()) document.getElementById('owner-modal').style.display = 'flex';
+
+                            uniqueParticipants.add(user);
+                            participantsPool.push(user);
+                            
+                            if (isSub && document.getElementById('sub-power').checked) {
+                                participantsPool.push(user);
+                                dbg(`💎 ${user} (2x SUB sjanse!)`, true);
+                            } else {
+                                dbg(`${user} ble med!`);
+                            }
+                            document.getElementById('count').innerText = uniqueParticipants.size;
+                        }
+                    }
+                }
+            };
+        }
+
+        function showFullList() {
+            const listEl = document.getElementById('full-user-list');
+            const sorted = Array.from(uniqueParticipants).sort();
+            listEl.innerHTML = sorted.length ? sorted.map((u, i) => `${i+1}. ${u}`).join("<br>") : "Ingen påmeldte...";
+            document.getElementById('list-modal').style.display = 'flex';
+        }
+
+        function ownerAnswer(isYes) {
+            document.getElementById('owner-modal').style.display = 'none';
+            if (isYes) dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
+        }
+
+        function draw() {
+            if (participantsPool.length === 0) return alert("Ingen deltakere!");
+            const winner = participantsPool[Math.floor(Math.random() * participantsPool.length)];
+            
+            // Vis i GUI
+            document.getElementById('winner-name').innerText = winner;
+            document.getElementById('winner-overlay').style.display = 'flex';
+            confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
+
+            // Send melding til Twitch-chat
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(`PRIVMSG #${channelName} :Gratulerer @${winner}, du vant giveawayen! 🎉`);
+                dbg(`Melding sendt til chat: Vinner er ${winner}`);
+            }
+        }
+    </script>
+</body>
+</html>
