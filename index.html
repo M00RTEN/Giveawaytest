@@ -2,105 +2,141 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <title>GameNinja Giveaway - Universal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameNinja Giveaway System</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; }
-        .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; }
-        input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 8px; margin: 10px 0; text-align: center; box-sizing: border-box; }
-        .btn { background: var(--p); color: white; border: none; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1rem; }
-        #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 15px; border: 1px solid #222; font-family: monospace; }
-        .stats { font-size: 4rem; font-weight: 900; color: var(--a); margin: 10px 0; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .card { background: #18181b; padding: 40px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
+        h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.2rem; margin-bottom: 20px; font-weight: 900; }
+        .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 20px 0; }
+        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
+        .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
+        .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
+        #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
     </style>
 </head>
 <body>
 
-    <div id="setup" class="card">
-        <h2>Oppsett</h2>
-        <p style="font-size: 0.9rem; color: #aaa;">Hent token fra <a href="https://antiscuff.com/oauth/" target="_blank" style="color:var(--a);">antiscuff.com/oauth</a></p>
-        <input type="password" id="oauth-token" placeholder="oauth:your_token_here">
-        <input type="text" id="channel-name" placeholder="Ditt kanalnavn">
-        <button class="btn" onclick="startApp()">START GIVEAWAY</button>
+    <!-- Logg inn skjerm -->
+    <div id="login-screen" class="card">
+        <h1>GameNinja Giveaways</h1>
+        <p>Logg inn for å starte giveaway i din chat.</p>
+        <button class="btn" onclick="login()">LOGG INN MED TWITCH</button>
     </div>
 
+    <!-- Hovedapplikasjon -->
     <div id="app" style="display:none;" class="card">
-        <h2 id="display-name" style="color:var(--p);">KANAL</h2>
+        <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
         <input type="text" id="cmd" value="!join">
         <div class="stats" id="count">0</div>
         <button class="btn" onclick="draw()">TREKK VINNER & SEND CHAT</button>
         <div id="debug"></div>
     </div>
 
+    <!-- Vinner Overlay -->
+    <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
+        <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
+        <h1 style="font-size: 5rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
+        <p style="color: #444;">Klikk for å lukke</p>
+    </div>
+
     <script>
+        const CLIENT_ID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
+        const REDIRECT_URI = window.location.origin + window.location.pathname; 
+        
         let socket;
         let pool = [];
         let participants = new Set();
-        let currentChan = "";
+        let channelName = "";
 
-        const log = (msg) => {
+        const dbg = (msg) => {
             const d = document.getElementById('debug');
             d.innerHTML += `> ${msg}<br>`;
             d.scrollTop = d.scrollHeight;
         };
 
-        function startApp() {
-            const token = document.getElementById('oauth-token').value.trim();
-            currentChan = document.getElementById('channel-name').value.trim().toLowerCase();
-
-            if (!token || !currentChan) return alert("Du må fylle inn både token og kanalnavn!");
-
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            document.getElementById('display-name').innerText = currentChan.toUpperCase();
-
-            connect(currentChan, token);
+        // 1. Send brukeren til Twitch for godkjenning
+        function login() {
+            const scopes = encodeURIComponent("chat:read chat:edit");
+            const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scopes}`;
+            window.location.href = authUrl;
         }
 
-        function connect(chan, tok) {
+        // 2. Sjekk om vi har kommet tilbake fra Twitch med en token
+        const hash = window.location.hash;
+        if (hash) {
+            const params = new URLSearchParams(hash.replace("#", "?"));
+            const token = params.get("access_token");
+
+            if (token) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                
+                // Hent brukernavn fra Twitch API
+                fetch('https://api.twitch.tv/helix/users', {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CLIENT_ID }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    channelName = data.data[0].login;
+                    document.getElementById('chan-display').innerText = channelName.toUpperCase();
+                    connectToChat(channelName, token);
+                })
+                .catch(err => dbg("Feil ved henting av brukerdata: " + err));
+            }
+        }
+
+        // 3. Koble til chat via WebSocket
+        function connectToChat(chan, tok) {
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
 
             socket.onopen = () => {
-                socket.send(`PASS ${tok}`);
+                socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                log("Tilkoblet og klar for påmeldinger!");
+                dbg("Tilkoblet din chat!");
             };
 
-            socket.onmessage = (e) => {
-                if (e.data.includes('PING')) {
+            socket.onmessage = (event) => {
+                const raw = event.data;
+                
+                if (raw.includes('PING :tmi.twitch.tv')) {
                     socket.send('PONG :tmi.twitch.tv');
                     return;
                 }
-                if (e.data.includes('PRIVMSG')) {
-                    const parts = e.data.split('!');
-                    const user = parts[0].substring(1);
-                    const msg = e.data.split('PRIVMSG')[1].split(':')[1].trim().toLowerCase();
+
+                if (raw.includes('PRIVMSG')) {
+                    const user = raw.split('!')[0].substring(1);
+                    const msg = raw.split('PRIVMSG')[1].split(':')[1].trim().toLowerCase();
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
 
-                    if (user && msg === trigger && !participants.has(user)) {
+                    if (msg === trigger && !participants.has(user)) {
                         participants.add(user);
                         pool.push(user);
                         document.getElementById('count').innerText = participants.size;
-                        log(`${user} ble med.`);
+                        dbg(`${user} ble med!`);
                     }
                 }
             };
         }
 
+        // 4. Trekk vinner og send melding automatisk
         function draw() {
-            if (pool.length === 0) return alert("Ingen deltakere!");
-            const winner = pool[Math.floor(Math.random() * pool.length)];
+            if (pool.length === 0) return alert("Ingen deltakere har skrevet kommandoen ennå!");
             
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            const winner = pool[Math.floor(Math.random() * pool.length)];
+            document.getElementById('winner-name').innerText = winner;
+            document.getElementById('winner-overlay').style.display = 'flex';
+            confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
 
             if (socket && socket.readyState === WebSocket.OPEN) {
-                const text = `Gratulerer @${winner}! Du vant giveawayen! 🎉 Send en melding her eller whisper med info.`;
-                socket.send(`PRIVMSG #${currentChan} :${text}`);
-                log(`MELDING SENDT TIL CHAT: Vinner er ${winner}`);
+                const message = `Gratulerer @${winner}! Du vant giveawayen! 🎉 Send en melding i chat eller whisper med info.`;
+                socket.send(`PRIVMSG #${channelName} :${message}`);
+                dbg(`Melding sendt til chat for vinner: ${winner}`);
             }
-            
-            alert("Vinneren er: " + winner);
         }
     </script>
 </body>
