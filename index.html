@@ -3,140 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameNinja Giveaway System</title>
+    <title>Stream Giveaway System</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .card { background: #18181b; padding: 40px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
-        h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.2rem; margin-bottom: 20px; font-weight: 900; }
-        .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 20px 0; }
-        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
-        .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
-        .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
-        #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        :root { 
+            --p: #9146ff; 
+            --a: #00f2ff; 
+            --bg: #0e0e10; 
+        }
+
+        body { 
+            background: transparent; /* Viktig for OBS */
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* ADMIN PANEL - Skal ikke synes i OBS hvis du beskjærer kilden */
+        .admin-panel {
+            background: #18181b; 
+            padding: 30px; 
+            border-radius: 20px; 
+            border: 2px solid var(--p); 
+            max-width: 350px; 
+            width: 100%; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            z-index: 10;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .stats { font-size: 3rem; font-weight: 900; color: var(--a); margin: 10px 0; text-align: center; }
+        input { width: 100%; padding: 10px; background: #000; border: 1px solid #333; color: white; border-radius: 8px; margin: 10px 0; text-align: center; box-sizing: border-box; }
+        .btn { background: var(--p); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s; }
+        .btn:hover { filter: brightness(1.2); }
+
+        /* STREAM OVERLAY - Dette er det seerne ser */
+        #stream-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0); /* Gjennomsiktig bakgrunn */
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .winner-box {
+            background: linear-gradient(135deg, rgba(24, 24, 27, 0.95), rgba(14, 14, 16, 0.98));
+            padding: 60px 100px;
+            border-radius: 50px;
+            border: 4px solid var(--a);
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.4);
+            text-align: center;
+            animation: winnerPop 0.6s cubic-bezier(0.17, 0.89, 0.32, 1.49) forwards;
+        }
+
+        .winner-title {
+            text-transform: uppercase;
+            letter-spacing: 12px;
+            color: var(--p);
+            font-weight: 900;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            animation: glowText 2s infinite alternate;
+        }
+
+        #winner-name {
+            font-size: 6rem;
+            margin: 0;
+            color: #fff;
+            text-shadow: 0 0 20px var(--a);
+        }
+
+        @keyframes winnerPop {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes glowText {
+            from { text-shadow: 0 0 5px var(--p); }
+            to { text-shadow: 0 0 20px var(--p), 0 0 30px var(--a); }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Logg inn skjerm -->
-    <div id="login-screen" class="card">
-        <h1>GameNinja Giveaways</h1>
-        <p>Logg inn for å starte giveaway i din chat.</p>
-        <button class="btn" onclick="login()">LOGG INN MED TWITCH</button>
+    <!-- KONTROLLPANEL (Flytt denne ut av bildet i OBS eller bruk Window Capture) -->
+    <div id="login-screen" class="admin-panel">
+        <h2 style="margin:0 0 10px 0;">Giveaway</h2>
+        <button class="btn" onclick="login()">KOBLE TIL TWITCH</button>
     </div>
 
-    <!-- Hovedapplikasjon -->
-    <div id="app" style="display:none;" class="card">
-        <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
+    <div id="app" style="display:none;" class="admin-panel">
+        <div id="chan-name" style="font-size: 0.8rem; color: var(--p); font-weight: bold;"></div>
         <input type="text" id="cmd" value="!join">
         <div class="stats" id="count">0</div>
-        <button class="btn" onclick="draw()">TREKK VINNER & SEND CHAT</button>
-        <div id="debug"></div>
+        <button class="btn" onclick="draw()">TREKK & VIS OVERLAY</button>
     </div>
 
-    <!-- Vinner Overlay -->
-    <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
-        <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
-        <h1 style="font-size: 5rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
-        <p style="color: #444;">Klikk for å lukke</p>
+    <!-- STREAM OVERLAY (Dette er det du ser i OBS) -->
+    <div id="stream-overlay">
+        <div class="winner-box">
+            <div class="winner-title">VINNEREN ER</div>
+            <h1 id="winner-name">?</h1>
+        </div>
     </div>
 
     <script>
         const CLIENT_ID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
         const REDIRECT_URI = window.location.origin + window.location.pathname; 
-        
-        let socket;
-        let pool = [];
-        let participants = new Set();
-        let channelName = "";
+        let socket, pool = [], participants = new Set(), channelName = "";
 
-        const dbg = (msg) => {
-            const d = document.getElementById('debug');
-            d.innerHTML += `> ${msg}<br>`;
-            d.scrollTop = d.scrollHeight;
-        };
-
-        // 1. Send brukeren til Twitch for godkjenning
         function login() {
             const scopes = encodeURIComponent("chat:read chat:edit");
-            const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scopes}`;
-            window.location.href = authUrl;
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${scopes}`;
         }
 
-        // 2. Sjekk om vi har kommet tilbake fra Twitch med en token
         const hash = window.location.hash;
         if (hash) {
             const params = new URLSearchParams(hash.replace("#", "?"));
             const token = params.get("access_token");
-
             if (token) {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app').style.display = 'block';
-                
-                // Hent brukernavn fra Twitch API
                 fetch('https://api.twitch.tv/helix/users', {
                     headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CLIENT_ID }
-                })
-                .then(r => r.json())
-                .then(data => {
+                }).then(r => r.json()).then(data => {
                     channelName = data.data[0].login;
-                    document.getElementById('chan-display').innerText = channelName.toUpperCase();
+                    document.getElementById('chan-name').innerText = channelName.toUpperCase();
                     connectToChat(channelName, token);
-                })
-                .catch(err => dbg("Feil ved henting av brukerdata: " + err));
+                });
             }
         }
 
-        // 3. Koble til chat via WebSocket
         function connectToChat(chan, tok) {
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-
             socket.onopen = () => {
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("Tilkoblet din chat!");
             };
-
             socket.onmessage = (event) => {
                 const raw = event.data;
-                
-                if (raw.includes('PING :tmi.twitch.tv')) {
-                    socket.send('PONG :tmi.twitch.tv');
-                    return;
-                }
-
+                if (raw.includes('PING')) return socket.send('PONG :tmi.twitch.tv');
                 if (raw.includes('PRIVMSG')) {
                     const user = raw.split('!')[0].substring(1);
                     const msg = raw.split('PRIVMSG')[1].split(':')[1].trim().toLowerCase();
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
-
                     if (msg === trigger && !participants.has(user)) {
                         participants.add(user);
                         pool.push(user);
                         document.getElementById('count').innerText = participants.size;
-                        dbg(`${user} ble med!`);
                     }
                 }
             };
         }
 
-        // 4. Trekk vinner og send melding automatisk
         function draw() {
-            if (pool.length === 0) return alert("Ingen deltakere har skrevet kommandoen ennå!");
-            
+            if (pool.length === 0) return alert("Ingen deltakere!");
             const winner = pool[Math.floor(Math.random() * pool.length)];
+            
+            // Aktiver overlay
+            const overlay = document.getElementById('stream-overlay');
             document.getElementById('winner-name').innerText = winner;
-            document.getElementById('winner-overlay').style.display = 'flex';
+            overlay.style.display = 'flex';
+
+            // Effekt
             confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
 
+            // Bot-melding
             if (socket && socket.readyState === WebSocket.OPEN) {
-                const message = `Gratulerer @${winner}! Du vant giveawayen! 🎉 Send en melding i chat eller whisper med info.`;
-                socket.send(`PRIVMSG #${channelName} :${message}`);
-                dbg(`Melding sendt til chat for vinner: ${winner}`);
+                socket.send(`PRIVMSG #${channelName} :🎉 Gratulerer @${winner}! Du vant giveawayen! 🎉`);
             }
+
+            // Skjul overlay automatisk etter 10 sekunder
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 10000);
         }
     </script>
 </body>
